@@ -1,0 +1,10 @@
+import numpy as np
+import pyfits as pf
+import matplotlib.pyfits as plt
+
+
+def accum(x,y)
+    current = pf.getdata(x+"_residualMap.fits")
+    resData = pf.getdata(resid)
+    stackdata = currentStack + ((resData - currentStack)/(len(starList)))
+

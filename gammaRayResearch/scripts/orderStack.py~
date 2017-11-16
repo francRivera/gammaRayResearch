@@ -1,0 +1,11 @@
+''' This script orders the stack from strongest M dwarf source to faintest '''
+
+import numpy as np
+
+
+radioSources = np.genfromtxt('/Users/Francis/gammaRayResearch/radioBased/radioSurvey_McLean_2012.txt',dtype=None, skip_header=71, skip_footer=2, delimiter=(8,9,15,13,5,4,5,6,6,2,6,4,6,33,10,10), autostrip=True)
+
+xraySources = np.genfromtxt('/Users/Francis/gammaRayResearch/xrayBased/shkolnikMdwarfs.txt',dtype=None, skip_header=57, skip_footer=1, delimiter=(8,9,28,5,6,5,7,7,7,12,12), autostrip=True)
+
+
+def rename()

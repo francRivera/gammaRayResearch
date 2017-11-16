@@ -1,0 +1,12 @@
+## Python script to extract the M-dwarf  coordinates from the shkolnikMdwarfs file.
+import numpy as np
+
+#file = str(input("Enter the file location: "))
+
+
+# np.genfromtxt(file, dtype={'names':('_Glon (deg)','_Glat (deg)','Name','Spt','Dist (pc)','e_Dist (pc)','[Fx/Fj]([-])','W (Ha)(0.1nm)','RAJ2000 ("h:m:s")','DEJ2000 ("d:m:s")')}, 
+
+data = np.genfromtxt('shkolnikMdwarfs.txt',dtype=None, skip_header=23, skip_footer=1, delimiter=[8,9,28,5,6,5,7,7,7,12,12], autostrip=True)
+
+print data
+              

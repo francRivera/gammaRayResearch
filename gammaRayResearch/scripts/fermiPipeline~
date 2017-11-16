@@ -1,0 +1,111 @@
+ls *_PH* > binned_events.txt 
+
+echo 'Start time:' > progress.txt
+date >> progress.txt
+
+gtselect infile=@binned_events.txt outfile=source_name_binned1_filtered.fits ra=INDEF dec=INDEF rad=INDEF tmin=INDEF tmax=INDEF emin=100 emax=100000 zmax= 90 evclass=128 evtype=3
+
+# Specify the energy bin bounds
+
+echo '' >> progress.txt
+echo 'gtmktime:' >> progress.txt
+date >> progress.txt
+
+gtmktime scfile=spacecraft_file.fits filter="DATA_QUAL>0 && LAT_CONFIG==1 && ABS(ROCK_ANGLE)<52" roicut=no evfile=source_name_binned1_filtered.fits outfile=source_name_binned1_gti.fits
+
+# You must specify SC file directly
+
+echo '' >> progress.txt
+echo 'gtbin cmap:' >> progress.txt
+date >> progress.txt
+
+gtbin scfile=none outfile=source_name_binned1_cmap.fits evfile=source_name_binned1_gti.fits algorithm=CMAP nxpix=80 nypix=80 binsz=0.1 coordsys=CEL xref=right_ascension yref=declination axisrot=0 proj=AIT 
+
+#    for xref and yref, not sure if you can just put INDEF 
+#    To calculate the size of the x and y axis, multiply the ROI radius
+#    by 2 and then divide that by the image scale (0.2) 
+
+echo '' >> progress.txt
+echo 'gtbin ccube:' >> progress.txt 
+date >> progress.txt
+
+gtbin algorithm=CCUBE evfile=source_name_binned1_gti.fits outfile=source_name_binned1_ccube.fits scfile=none nxpix=56 nypix=56 binsz=0.1 coordsys=CEL xref=right_ascension yref=declination axisrot=0 proj=AIT ebinalg=LOG emin=100 emax=100000 enumbins=10
+
+#     This gtbin command makes a counts cube
+#     To determine the size of the x and y axis, find the largest side of
+#     a square that will fit in the region of interest specified.
+#     To do this, multiply the ROI radius by sqrt(2) and then divide by
+#     the value you used for (degrees/pixel) 
+#     Make sure to change the energy min & max
+
+echo '' >> progress.txt
+echo 'input model creation:' >> progress.txt 
+date >> progress.txt
+
+echo 'Run make3FGLxml.py script' 
+# python ~/fermiTools/make3FGLxml.py ~/fermiTools/gll_psc_v16.fit source_name_gti.fits -o source_name_input_model.xml -G $FERMI_DIR/refdata/fermi/galdiffuse/gll_iem_v06.fits -g gl\
+l_iem_v06 -I $FERMI_DIR/refdata/fermi/galdiffuse/iso_P8R2_SOURCE_V6_v06.txt -i iso_P8R2_SOURCE_V6_v06 -s 120 -p TRUE -v TRUE
+
+# make sure you have gll_psc_v16.fit in your working directory
+
+# Next go into the xml file and change the source you are looking at
+# to power law 2 and change the relevant parameters. Go to this site:
+# http://fermi.gsfc.nasa.gov/ssc/data/analysis/scitools/xml_model_defs.html
+# Might want to change the name of the source as well.
+
+  # <spectrum type="PowerLaw2">
+  # 	      <parameter free="1" max="1000.0" min="1e-08" name="Integral" scale="1e-08" value="1.0"/>
+  # 	      <parameter free="1" max="-1.0" min="-5.0" name="Index" scale="1.0" value="-2.0"/>
+  # 	      <parameter free="0" max="100000.0" min="100.0" name="LowerLimit" scale="1.0" value="100.0"/>
+  # 	      <parameter free="0" max="100000.0" min="100.0" name="UpperLimit" scale="1.0" value="1e5"/>
+  # </spectrum>
+
+echo '' >> progress.txt
+echo 'Live time cube:' >> progress.txt 
+date >> progress.txt
+
+gtltcube zmax=90 evfile=source_name_binned1_gti.fits scfile=spacecraft_file.fits outfile=source_name_binned_ltcube.fits dcostheta=0.025 binsz=1 
+
+# Make sure to change the space craft file!
+
+echo '' >> progress.txt
+echo 'exposure cube:' >> progress.txt 
+date >> progress.txt
+
+gtexpcube2 infile=source_name_binned_ltcube.fits cmap=none outfile=source_name_binned1_allsky_expcube.fits irfs=P8R2_SOURCE_V6 nxpix=3600 nypix=1800 binsz=.1 coordsys=CEL xref=right_ascension yref=declination axisrot=0 proj=AIT emin=100 emax=100000 enumbins=10
+ 
+# ebinfile left out. Make sure to manually input the xref and yref
+# Here I have made an allsky exposure cube
+
+echo '' >> progress.txt
+echo 'Prompt:' >> progress.txt 
+date >> progress.txt
+
+read -p "Are you done editing the xml file (y/n)?" choice
+case "$choice" in 
+  y|Y ) echo "yes";;
+  n|N ) echo "no";;
+  * ) echo "invalid";;
+esac
+
+echo '' >> progress.txt
+echo 'Source Map:' >> progress.txt 
+date >> progress.txt
+
+gtsrcmaps expcube=source_name_binned_ltcube.fits cmap=source_name_binned1_ccube.fits srcmdl=source_name_input_model1.xml bexpmap=source_name_binned1_allsky_expcube.fits outfile=source_name_binned1_srcmaps.fits irfs=P8R2_SOURCE_V6 
+
+# Change filenames as needed
+
+echo '' >> progress.txt
+echo 'Likelihood:' >> progress.txt 
+date >> progress.txt
+
+gtlike refit=no plot=no sfile=source_name_binned1_output.xml statistic=BINNED cmap=source_name_binned1_srcmaps.fits bexpmap=source_name_binned1_allsky_expcube.fits expcube=source_name_binned_ltcube.fits srcmdl=source_name_input_model1.xml irfs=P8R2_SOURCE_V6 optimizer=DRMNFB results=source_name_result.dat
+
+echo '' >> progress.txt
+echo 'End Time' >> progress.txt 
+date >> progress.txt
+
+# gtmodel srcmaps=source_name_binned1_srcmaps.fits srcmdl=source_name_binned1_output2.xml outfile=source_name_model_map.fits irfs=P8R2_SOURCE_V6 expcube=source_name_binned_ltcube.fits bexpmap=source_name_binned1_allsky_expcube.fits
+
+gtbin algorithm=CMAP evfile=source_name_binned1_gti.fits outfile=source_name_binned_cmap_small.fits scfile=none nxpix=141 nypix=141 binsz=0.1 coordsys=CEL xref=right_ascension yref=declination axisrot=0 proj=STG
